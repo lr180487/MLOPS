@@ -1,0 +1,36 @@
+# --- Procesamiento y entrenamiento ---
+pandas>=2.2
+numpy>=1.26
+scikit-learn>=1.6
+joblib>=1.4
+matplotlib>=3.8
+seaborn>=0.13
+
+# --- Notebook ---
+jupyter
+nbconvert
+ipykernel
+
+# --- Servicio (FastAPI + SSE + dashboard) ---
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.6
+python-multipart
+
+# --- Persistencia y caché (opcionales en tiempo de ejecución: sin ellos hay fallback) ---
+psycopg[binary]>=3.1      # PostgreSQL vía DATABASE_URL; si falta → SQLite
+httpx>=0.27               # cliente REST de Upstash Redis (UPSTASH_REDIS_REST_URL/TOKEN); si falta → solo LRU local
+
+# --- Exportación de la base de datos (CSV / XLSX / PDF) ---
+openpyxl>=3.1              # XLSX (pandas.ExcelWriter)
+reportlab>=4.0             # PDF; si falta, la API cae a un PDF básico con matplotlib
+
+# --- Página de análisis (/analisis): series temporales ---
+statsmodels>=0.14        # Holt optimizado y ARIMA; si falta, ARIMA se declara no disponible y Holt usa una versión propia
+
+# --- Interfaz Gradio ---
+gradio>=4.0
+plotly>=5.18
+
+# --- Utilidades / pruebas ---
+requests

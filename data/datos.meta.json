@@ -1,0 +1,10 @@
+{
+  "origen": "sintetico_calibrado",
+  "descripcion": "Registros originales conservados más observaciones generadas a partir de ellos (muestreo por cultivo de las variables climáticas y resultado sorteado con un modelo ajustado a los datos originales).",
+  "filas_totales": 1000,
+  "filas_originales": 50,
+  "filas_generadas": 950,
+  "semilla": 42,
+  "generado_en": "2026-10-15T04:46:53+00:00",
+  "archivo_original": "datos_original_50.csv"
+}

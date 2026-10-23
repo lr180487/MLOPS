@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Analiza los datos con varios tipos de algoritmos: regresión, clasificación, clustering, detección de anomalías y series temporales." />
+  <title>Análisis de datos · MLOps Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232546e8'/><circle cx='35' cy='38' r='11' fill='white'/><circle cx='66' cy='32' r='8' fill='%23bfd3fe'/><circle cx='60' cy='66' r='13' fill='white'/><circle cx='30' cy='70' r='7' fill='%23bfd3fe'/></svg>" />
+
+  <!-- Tipografías (Google Fonts CDN): Inter para texto, JetBrains Mono para cifras -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+
+  <!-- ══════════════ Tailwind CSS vía CDN oficial (versión fijada 3.4.17) ══════════════ -->
+  <!-- Pantalla de arranque (logo + anillo giratorio, 5 s); se inyecta antes que Tailwind para verse desde el primer fotograma -->
+  <script src="loader.js"></script>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+
+  <!-- Configuración del tema (paleta corporativa, sombras, animaciones) -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Segoe UI', 'ui-sans-serif', 'system-ui', 'Helvetica Neue', 'Arial', 'sans-serif'],
+            mono: ['JetBrains Mono', 'SFMono-Regular', 'Menlo', 'Consolas', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eef4ff', 100: '#dbe6fe', 200: '#bfd3fe', 300: '#93b4fd', 400: '#608bfa',
+              500: '#3b63f5', 600: '#2546e8', 700: '#1d36d4', 800: '#1e2eab', 900: '#1e2d87',
+            },
+            surface: { DEFAULT: '#ffffff', muted: '#f6f8fb', ring: '#e6eaf0' },
+          },
+          boxShadow: {
+            card: '0 1px 2px rgba(16, 24, 40, .04), 0 1px 3px rgba(16, 24, 40, .06)',
+            'card-hover': '0 4px 12px rgba(16, 24, 40, .08)',
+            focus: '0 0 0 3px rgba(59, 99, 245, .25)',
+          },
+          keyframes: {
+            pulseDot: { '0%,100%': { opacity: '1', transform: 'scale(1)' }, '50%': { opacity: '.35', transform: 'scale(.75)' } },
+            flash: { '0%': { backgroundColor: 'rgba(59, 99, 245, .07)' }, '100%': { backgroundColor: 'transparent' } },
+            rise: { '0%': { opacity: '0', transform: 'translateY(6px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+          },
+          animation: { pulseDot: 'pulseDot 1.6s ease-in-out infinite', flash: 'flash 1.1s ease-out', rise: 'rise .3s ease-out' },
+        },
+      },
+    };
+  </script>
+
+  <!-- Clases de componente del dashboard (procesadas por el CDN de Tailwind: admite @layer y @apply) -->
+  <style type="text/tailwindcss">
+    @layer base {
+      :root { color-scheme: light; }
+      html { @apply antialiased scroll-smooth; }
+      body { @apply bg-surface-muted text-slate-700 font-sans text-sm; }
+      h1, h2, h3 { @apply text-slate-900 tracking-tight; }
+      code { @apply font-mono text-[0.85em] rounded bg-slate-100 px-1 py-0.5 text-slate-700; }
+      ::selection { @apply bg-brand-100 text-brand-900; }
+      input[type='range'] { accent-color: #2546e8; }
+      select, input[type='number'] { @apply focus:outline-none focus:shadow-focus focus:border-brand-400; }
+      button:focus-visible, a:focus-visible { @apply outline-none shadow-focus rounded-md; }
+    }
+
+    @layer components {
+      /* ---------- contenedores ---------- */
+      .card { @apply rounded-xl border border-surface-ring bg-surface shadow-card transition-shadow duration-200; }
+      .card:hover { @apply shadow-card-hover; }
+      .card-head { @apply flex flex-wrap items-start justify-between gap-3; }
+      .card-title { @apply text-[15px] font-semibold text-slate-900; }
+      .card-sub { @apply mt-0.5 text-xs text-slate-500; }
+
+      /* ---------- KPIs ---------- */
+      .kpi { @apply card p-4 relative overflow-hidden; }
+      .kpi::before { content: ''; @apply absolute inset-x-0 top-0 h-0.5 bg-slate-200; }
+      .kpi-emerald::before { @apply bg-emerald-500; }
+      .kpi-brand::before { @apply bg-brand-500; }
+      .kpi-violet::before { @apply bg-violet-500; }
+      .kpi-amber::before { @apply bg-amber-500; }
+      .kpi-label { @apply text-[11px] font-medium uppercase tracking-wider text-slate-500; }
+      .kpi-value { @apply mt-1 text-2xl font-semibold text-slate-900 tabular-nums; }
+      .kpi-foot { @apply mt-1 text-[11px] text-slate-400; }
+      .int-lead { @apply rounded-xl border border-brand-100 bg-brand-50/60 p-4 text-sm leading-relaxed text-slate-700; }
+      .int-recs { @apply mt-3 rounded-xl border border-surface-ring bg-white p-4; }
+      .int-rec-list { @apply mt-2 space-y-2; }
+      .int-rec-list li { @apply flex items-start gap-2 text-[13px] leading-relaxed text-slate-700; }
+      .int-rec-list b { @apply font-medium text-slate-900; }
+      .int-porque { @apply text-slate-500; }
+      .int-porque::before { content: "— "; @apply text-slate-400; }
+      .int-prio { @apply mt-0.5 inline-flex shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none tracking-wide; }
+      .int-prio-alta { @apply bg-rose-100 text-rose-700; }
+      .int-prio-media { @apply bg-amber-100 text-amber-800; }
+      .int-prio-baja { @apply bg-slate-100 text-slate-600; }
+      .int-leyenda { @apply mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400; }
+      .int-grid { @apply mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2; }
+      .int-bloque { @apply rounded-xl border border-surface-ring bg-white p-4; }
+      .int-bloque h3 { @apply flex items-center gap-2 text-sm font-semibold text-slate-800; }
+      .int-bloque p, .int-bloque li { @apply text-[13px] leading-relaxed text-slate-600; }
+      .int-bloque p + p { @apply mt-2; }
+      .int-bloque ul { @apply mt-2 space-y-1.5; }
+      .int-bloque li { @apply flex gap-2; }
+      .int-bloque li::before { content: "•"; @apply text-brand-500; }
+      .int-bloque b { @apply font-semibold text-slate-900; }
+      .int-chip { @apply inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-700; }
+      .int-up { @apply text-emerald-700 font-medium; }
+      .int-down { @apply text-rose-700 font-medium; }
+      .int-nota { @apply mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800; }
+
+      /* ---------- pastillas / badges ---------- */
+      .pill { @apply inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium; }
+      .pill-neutral { @apply pill border-surface-ring bg-white text-slate-600; }
+      .pill-brand { @apply pill border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100 transition; }
+      .badge { @apply inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold leading-none; }
+      .badge-si { @apply badge bg-violet-100 text-violet-700; }
+      .badge-no { @apply badge bg-slate-100 text-slate-600; }
+      .badge-ok { @apply badge bg-emerald-100 text-emerald-700; }
+      .badge-err { @apply badge bg-rose-100 text-rose-700; }
+      .badge-origen { @apply badge bg-slate-100 text-slate-500 font-normal; }
+      .badge-origen-api { @apply badge bg-brand-50 text-brand-700 font-normal; }
+
+      /* ---------- botones ---------- */
+      .btn { @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed; }
+      .btn-primary { @apply btn bg-brand-600 text-white hover:bg-brand-700 shadow-sm; }
+      .btn-secondary { @apply btn border border-surface-ring bg-white text-slate-700 hover:bg-slate-50; }
+      .btn-xs { @apply rounded-md px-2.5 py-1 text-xs; }
+      .btn-emerald { @apply btn btn-xs bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100; }
+      .btn-rose { @apply btn btn-xs bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100; }
+
+      /* ---------- tabs segmentadas ---------- */
+      .tabs { @apply inline-flex rounded-lg border border-surface-ring bg-slate-50 p-0.5 text-xs; }
+      .tab { @apply rounded-md px-2.5 py-1 text-slate-500 transition hover:text-slate-800 whitespace-nowrap; }
+      .tab-active { @apply bg-white text-brand-700 shadow-sm font-medium; }
+
+      /* ---------- formularios ---------- */
+      .label { @apply block text-xs font-medium text-slate-500 mb-1; }
+      .select { @apply w-full rounded-lg border border-surface-ring bg-white px-3 py-2 text-sm text-slate-800; }
+      .select-sm { @apply rounded-lg border border-surface-ring bg-white px-2 py-1.5 text-xs text-slate-800; }
+      .range { @apply w-full h-1.5 cursor-pointer; }
+
+      /* ---------- tablas ---------- */
+      .table-wrap { @apply overflow-auto rounded-lg border border-surface-ring; }
+      .table { @apply w-full text-xs; }
+      .table thead { @apply sticky top-0 z-10 bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500; }
+      .table th { @apply px-3 py-2 font-medium border-b border-surface-ring; }
+      .table td { @apply px-3 py-1.5 border-b border-slate-100; }
+      .table tbody tr:hover { @apply bg-brand-50/40; }
+      .row-error { @apply bg-rose-50/60; }
+
+      /* ---------- matriz de confusión ---------- */
+      .cm-cell { @apply rounded-lg border border-surface-ring p-3 text-center transition-all duration-500; }
+      .cm-cell:hover { @apply -translate-y-0.5 shadow-card-hover; }
+      .cm-tag { @apply text-[10px] font-medium uppercase tracking-wider text-slate-500; }
+      .cm-num { @apply text-2xl font-semibold text-slate-900 tabular-nums; }
+      .cm-pct { @apply text-[10px] text-slate-500; }
+      .cm-axis { @apply text-[11px] font-medium uppercase tracking-wider text-slate-500; }
+      .stat-box { @apply rounded-lg border border-surface-ring bg-slate-50 p-2 text-center; }
+      .stat-box dt { @apply text-[11px] text-slate-500; }
+      .stat-box dd { @apply font-mono text-base text-slate-900; }
+
+      /* ---------- misc ---------- */
+      .legend-axis { @apply [writing-mode:vertical-rl] rotate-180 text-[11px] text-slate-500; }
+      .scroll-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+      .scroll-thin::-webkit-scrollbar-thumb { @apply rounded-full bg-slate-300; }
+      .tooltip { @apply pointer-events-none fixed z-50 rounded-lg border border-surface-ring bg-white px-2.5 py-1.5 text-[11px] font-mono text-slate-800 shadow-card-hover; }
+      .log-view { @apply rounded-lg border border-surface-ring bg-slate-50 p-3 font-mono text-[11px] leading-relaxed text-slate-600 whitespace-pre-wrap; }
+      .log-warn { @apply text-amber-700; }
+      .log-error { @apply text-rose-700 font-medium; }
+      .drift-track { @apply relative mt-1 h-2 rounded-full bg-slate-100; }
+      .drift-mid { @apply absolute inset-y-0 left-1/2 w-px bg-slate-400; }
+      .drift-bar { @apply absolute inset-y-0 rounded-full transition-all duration-500; }
+      .alert-banner { @apply bg-rose-600 px-4 py-2 text-center text-sm text-white; }
+    }
+  </style>
+  <!-- Estilos propios de esta página -->
+  <style type="text/tailwindcss">
+    @layer components {
+      .nav-link { @apply text-sm font-medium text-slate-500 hover:text-slate-900 transition; }
+      .nav-link-active { @apply text-brand-700; }
+      .tipo-card { @apply relative text-left rounded-xl border border-surface-ring bg-white p-4 transition hover:border-brand-300 hover:shadow-card-hover focus:outline-none focus-visible:shadow-focus; }
+      .tipo-card-active { @apply border-brand-500 ring-2 ring-brand-200 bg-brand-50/40; }
+      .tipo-num { @apply grid h-7 w-7 place-items-center rounded-lg bg-brand-600 text-xs font-semibold text-white; }
+      .tipo-card-active .tipo-num { @apply bg-brand-700; }
+      .chip { @apply inline-flex items-center rounded-md border border-surface-ring bg-slate-50 px-1.5 py-0.5 text-[11px] text-slate-600; }
+      .chip-metric { @apply inline-flex items-center rounded-md bg-violet-50 px-1.5 py-0.5 text-[11px] font-medium text-violet-700; }
+      .ctl { @apply space-y-1; }
+      .ctl-row { @apply flex items-center justify-between gap-2 text-xs text-slate-600; }
+      .ctl-val { @apply font-mono text-[11px] text-slate-800 tabular-nums; }
+      .res-card { @apply rounded-xl border border-surface-ring bg-white p-4; }
+      .res-title { @apply text-sm font-semibold text-slate-800; }
+      .res-sub { @apply text-xs text-slate-500 mt-0.5; }
+      .row-best { @apply bg-emerald-50/70; }
+      .row-base { @apply text-slate-500 italic; }
+      .badge-best { @apply badge bg-emerald-100 text-emerald-700 ml-1; }
+      .mini-kpi { @apply rounded-lg border border-surface-ring bg-slate-50 p-3; }
+      .mini-kpi dt { @apply text-[11px] uppercase tracking-wider text-slate-500; }
+      .mini-kpi dd { @apply mt-0.5 text-xl font-semibold text-slate-900 tabular-nums; }
+      .help { @apply ml-1 inline-grid h-4 w-4 cursor-help place-items-center rounded-full bg-slate-200 text-[10px] font-semibold text-slate-600 align-middle; }
+      .loader { @apply inline-block h-4 w-4 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600 align-middle; }
+      .glos-item { @apply rounded-lg border border-surface-ring bg-white p-3; }
+      .glos-item h4 { @apply text-xs font-semibold text-slate-800; }
+      .glos-item p { @apply mt-1 text-[12px] leading-relaxed text-slate-600; }
+    }
+  </style>
+</head>
+
+<body class="min-h-screen">
+  <div id="app-loader" role="status" aria-live="polite" aria-label="Cargando"><div class="al-centro"><span class="al-anillo"></span><span class="al-punto"></span><span class="al-logo"></span></div><p class="al-titulo">MLOps Dashboard</p><p class="al-texto">Cargando</p></div>
+  <!-- ═══════════════════════════════ HEADER ═══════════════════════════════ -->
+  <header class="sticky top-0 z-40 border-b border-surface-ring bg-white/95 backdrop-blur">
+    <div class="mx-auto flex max-w-[1400px] flex-wrap items-center gap-4 px-4 py-3 sm:px-6">
+      <a href="index.html" class="flex items-center gap-3">
+        <div class="grid h-10 w-10 place-items-center rounded-xl bg-brand-600 shadow-sm">
+          <svg viewBox="0 0 24 24" class="h-6 w-6 text-white" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="8" r="3"/><circle cx="17" cy="6" r="2.5"/><circle cx="15" cy="17" r="3.5"/><circle cx="6" cy="18" r="2"/></svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-semibold leading-tight">Análisis de datos</h1>
+          <p class="text-xs text-slate-500">Explora los datos con varios tipos de algoritmos y compara sus resultados</p>
+        </div>
+      </a>
+      <nav class="ml-auto flex flex-wrap items-center gap-4" aria-label="Navegación">
+        <a href="index.html" class="nav-link">Dashboard</a>
+        <a href="resultados.html" class="nav-link">Resultados</a>
+        <a href="analisis.html" class="nav-link nav-link-active" aria-current="page">Análisis</a>
+        <a href="#sec-sonidos" id="sn-pill" class="pill-brand" title="Configurar los sonidos de la interfaz">🔊 Sonidos</a>
+        <span id="k-filas" class="pill-neutral">— registros</span>
+      </nav>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-[1400px] space-y-6 px-4 py-6 sm:px-6">
+    <div id="aviso" class="hidden alert-banner rounded-lg"></div>
+
+    <!-- Selector de tipo de análisis -->
+    <section class="card p-5" aria-label="Tipos de análisis">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">¿Qué quieres hacer con los datos?</h2>
+          <p class="card-sub">Cada tipo de análisis responde una pregunta distinta y usa sus propios algoritmos y métricas. Elige uno: se ejecuta con los valores por defecto y puedes ajustarlo y volver a ejecutarlo.</p>
+        </div>
+      </div>
+      <div id="tipos" class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5" role="tablist" aria-label="Tipos de análisis"></div>
+    </section>
+
+    <!-- Panel del análisis seleccionado -->
+    <section class="card p-5" id="panel" aria-live="polite">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title" id="p-titulo">—</h2>
+          <p class="card-sub" id="p-sub"></p>
+        </div>
+        <span id="p-aprendizaje" class="pill-neutral"></span>
+      </div>
+      <div class="mt-4 grid grid-cols-1 gap-5 lg:grid-cols-[290px_minmax(0,1fr)]">
+        <aside class="space-y-4">
+          <div class="rounded-xl border border-surface-ring bg-slate-50/60 p-4">
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Ajustes</p>
+            <div id="controles" class="mt-3 space-y-3"></div>
+            <button id="btn-ejecutar" data-sonido="enviar" class="btn-primary mt-4 w-full">Ejecutar análisis</button>
+            <p id="estado" class="mt-2 min-h-[1rem] text-xs text-slate-500"></p>
+          </div>
+          <div class="rounded-xl border border-surface-ring bg-white p-4">
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Algoritmos que se comparan</p>
+            <ul id="p-algos" class="mt-2 space-y-1.5 text-[12px] text-slate-600"></ul>
+            <p class="mt-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Métricas</p>
+            <div id="p-metricas" class="mt-2 flex flex-wrap gap-1.5"></div>
+          </div>
+        </aside>
+        <div id="resultados" class="min-w-0 space-y-4">
+          <div class="rounded-xl border border-dashed border-surface-ring p-8 text-center text-sm text-slate-500">Elige un tipo de análisis para empezar.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Glosario -->
+    <section class="card p-5" aria-label="Cómo leer las métricas">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">Cómo leer las métricas y los algoritmos</h2>
+          <p class="card-sub">Explicación breve de cada métrica y de cada algoritmo que aparece en esta página.</p>
+        </div>
+        <div class="tabs" id="glos-tabs" role="tablist"></div>
+      </div>
+      <div id="glosario" class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"></div>
+    </section>
+
+    <!-- Sonidos -->
+    <section class="card p-5" id="sec-sonidos" aria-label="Sonidos">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">Sonidos</h2>
+          <p class="card-sub">Cada acción del panel tiene su propio sonido (enviar, resultado SI / NO, pestañas, descargas, avisos, cambio de página…) con reverberación ajustable. Empiezan a sonar tras tu primer clic en la página y la configuración se guarda en este navegador.</p>
+        </div>
+        <span id="sn-estado" class="pill-neutral"></span>
+      </div>
+      <div id="sn-config" class="mt-4"></div>
+    </section>
+
+    <footer class="pb-4 text-center text-[11px] text-slate-400">Práctica MLOps · <a href="index.html" class="underline hover:text-slate-600">Volver al dashboard</a> · <a href="resultados.html" class="underline hover:text-slate-600">Resultados</a></footer>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" onerror="this.onerror=null;this.src='vendor/chart.umd.min.js'"></script>
+  <script src="api-base.js"></script>
+  <script src="apibase.js"></script>
+  <script src="sonidos.js" defer></script>
+  <script src="animaciones.js" defer></script>
+  <script src="analisis.js" defer></script>
+</body>
+</html>
